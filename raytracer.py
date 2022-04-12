@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 LIGHT_AMBIENT = 0.2
 F_CONST = 25
 
+def Point(x, y, z):
+	return np.array((-y, -x, z))
+
 def distance(p1, p2):
 	return norm(p1 - p2)
 
@@ -33,15 +36,13 @@ class Sphere:
 		p = np.dot(ray.dir, v)
 		q = np.dot(v, v) - self.radius**2
 		delta = p**2 - q
-		t = None
 		if delta > 0:
 			temp = sqrt(delta)
 			t1 = -p + temp
 			t2 = -p - temp
-			ray.hit = ray.r0 + min(t1, t2) * ray.dir
+			if t1 > 0 and t2 > 0:
+				ray.hit = ray.r0 + min(t1, t2) * ray.dir
 
-
-		
 
 class Ray:
 	"""Ray class for ray tracing"""
@@ -67,7 +68,6 @@ class Ray:
 		if self.hit is not None:
 			return np.linalg.norm(self.hit - self.r0)
 
-		
 
 	def closest_intersection(self, objects):
 		"""Return index of object closest intersect point"""
@@ -119,8 +119,9 @@ class RayTracedImage:
 		specular_term = np.dot(h, normal)**F_CONST * obj.color
 		return ambient_term + diffuse_term + specular_term
 
-	def is_shadow(self, hit):
-		to_light = self.lightpos - hit
+
+	def is_shadow(self, hit, obj):
+		to_light = normalize(self.lightpos - obj.normal(hit))
 		shadow_ray = Ray(hit, to_light)
 		shadow_ray.closest_intersection(self.objects)
 		if shadow_ray.hit is not None:
@@ -138,7 +139,7 @@ class RayTracedImage:
 		ray.closest_intersection(self.objects)
 		if ray.hit is not None:
 			obj = self.objects[ray.index]
-			if self.is_shadow(ray.hit):
+			if self.is_shadow(ray.hit, obj):
 				color_out = LIGHT_AMBIENT * obj.color
 			else:
 				color_out = self.lighting(ray, obj)
@@ -164,11 +165,11 @@ class RayTracedImage:
 		plt.imsave("img.png", self.img_grid)
 
 
-s1 = Sphere((1, 0, -5), 2, (1, 0.2, 0))
-s2 = Sphere((-1, -1, -3), 1/2, (0, 0.5, 1)) 
+s1 = Sphere(Point(0, 0, -5), 2, (1, 0.2, 0))
+s2 = Sphere(Point(0, 1, -3), 1/2, (0, 0.5, 1)) 
 eyedist = 1
 background = (0.5, 0.5, 0.5)
-lightpos = (-1, -1, 0)
+lightpos = Point(0, 2, 0)
 
-img = RayTracedImage(50, 100, eyedist, background, lightpos, [s1])
+img = RayTracedImage(50, 100, eyedist, background, lightpos, [s1, s2])
 img.genourate()
